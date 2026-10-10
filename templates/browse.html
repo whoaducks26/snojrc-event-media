@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{% if rel %}{{ title }} · {% endif %}{{ site_name }}{% endblock %}
+{% block content %}
+
+{% if rel %}
+<nav class="crumbs">
+  <a href="{{ url_for('browse') }}">All events</a>
+  {% for name, path in crumbs %}
+    <span class="sep">/</span>
+    {% if loop.last %}<span>{{ name }}</span>{% else %}<a href="{{ url_for('browse', rel=path) }}">{{ name }}</a>{% endif %}
+  {% endfor %}
+</nav>
+{% endif %}
+
+<div class="heading">
+  <h1>{{ title }}</h1>
+  {% if rel and total %}
+    <a class="btn" href="{{ url_for('download_zip', rel=rel) }}">Download all ({{ total }})</a>
+  {% endif %}
+</div>
+
+{% if is_admin %}
+<section class="admin-panel card">
+  <form method="post" action="{{ url_for('make_folder', rel=rel) }}" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="name" required placeholder="{{ 'New event, e.g. SNOJRC 2026' if not rel else 'New subfolder, e.g. SSRS' }}">
+    <button class="btn secondary">Create folder</button>
+  </form>
+
+  {% if rel %}
+  <form id="upload-form" method="post" enctype="multipart/form-data" action="{{ url_for('upload', rel=rel) }}" class="row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="photos" multiple accept=".jpg,.jpeg,.png,.gif,.webp" required>
+    <button class="btn">Upload photos</button>
+    <progress max="1" value="0" hidden></progress>
+    <span class="upload-status"></span>
+  </form>
+
+  <form method="post" action="{{ url_for('delete', rel=rel) }}" class="row"
+        onsubmit="return confirm('Delete “{{ title }}” and everything inside it? This cannot be undone.')">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn danger">Delete this folder</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if folders %}
+<div class="folder-grid">
+  {% for f in folders %}
+  <a class="folder-card card" href="{{ url_for('browse', rel=f.rel) }}">
+    <div class="cover">
+      {% if f.cover %}
+        <img loading="lazy" src="{{ url_for('thumb', size='thumb', rel=f.cover) }}" alt="">
+      {% else %}
+        <span>No photos yet</span>
+      {% endif %}
+    </div>
+    <div class="meta">
+      <strong>{{ f.name }}</strong>
+      <small>{{ f.count }} photo{{ '' if f.count == 1 else 's' }}</small>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if images %}
+<form id="select-form" method="post" action="{{ url_for('download_zip', rel=rel) }}">
+  <div class="toolbar">
+    <label><input type="checkbox" id="select-all"> Select all</label>
+    <button class="btn" id="dl-selected" disabled>Download selected (<span id="sel-count">0</span>)</button>
+  </div>
+  <div class="photo-grid">
+    {% for img in images %}
+    <figure class="photo"
+            data-name="{{ img.name }}"
+            data-preview="{{ url_for('thumb', size='preview', rel=img.rel) }}"
+            data-download="{{ url_for('original', rel=img.rel, dl=1) }}"
+            data-delete="{{ url_for('delete', rel=img.rel) }}">
+      <img loading="lazy" src="{{ url_for('thumb', size='thumb', rel=img.rel) }}" alt="{{ img.name }}">
+      <label class="pick" title="Select"><input type="checkbox" name="files" value="{{ img.name }}"></label>
+    </figure>
+    {% endfor %}
+  </div>
+</form>
+{% elif not folders %}
+  <p class="empty">{{ 'No events yet.' if not rel else 'No photos here yet.' }}</p>
+{% endif %}
+
+<div id="lightbox" hidden>
+  <button class="lb-btn lb-close" aria-label="Close">&times;</button>
+  <button class="lb-btn lb-prev" aria-label="Previous">&#8249;</button>
+  <img alt="">
+  <button class="lb-btn lb-next" aria-label="Next">&#8250;</button>
+  <div class="lb-bar">
+    <span class="lb-name"></span>
+    <a class="btn lb-download" href="#">Download</a>
+    {% if is_admin %}
+    <form method="post" class="lb-delete" onsubmit="return confirm('Delete this photo?')">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn danger">Delete</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

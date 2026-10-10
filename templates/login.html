@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Admin login · {{ site_name }}{% endblock %}
+{% block content %}
+<form method="post" class="login card">
+  <h1>Admin login</h1>
+  <label for="password">Password</label>
+  <input id="password" type="password" name="password" required autofocus>
+  <button class="btn">Log in</button>
+</form>
+{% endblock %}
