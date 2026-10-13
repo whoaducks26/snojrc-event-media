@@ -3,36 +3,77 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, noarchive">
+  <meta name="theme-color" content="#0A0F79">
   <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" href="{{ url_for('static', filename='jrfs-crest.png') }}" type="image/png">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
-  <header class="topbar">
-    <a class="brand" href="{{ url_for('browse') }}">{{ site_name }}</a>
-    {% if is_admin %}
-      <div class="admin-status">
-        <span class="badge">Admin</span>
-        <form method="post" action="{{ url_for('logout') }}">
-          <input type="hidden" name="csrf" value="{{ csrf }}">
-          <button class="link">Log out</button>
-        </form>
+<body class="{% block body_class %}{% endblock %}">
+  <a class="skip-link" href="#main-content">Skip to gallery</a>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand-lockup" href="{{ url_for('browse') }}" aria-label="{{ site_name }} home">
+        <span class="brand-mark"><img src="{{ url_for('static', filename='jrfs-crest.png') }}" alt=""></span>
+        <span class="brand-copy">
+          <span class="brand-kicker">Jump Rope Federation Singapore</span>
+          <span class="brand-name">{{ site_name }}</span>
+        </span>
+      </a>
+
+      <div class="header-actions">
+        {% if access_protected %}<span class="privacy-chip"><span aria-hidden="true">●</span> Protected gallery</span>{% endif %}
+        {% if is_admin %}
+          <span class="admin-badge">Admin mode</span>
+          <form method="post" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="text-button" type="submit">Log out</button>
+          </form>
+        {% elif access_protected and viewer_authorized %}
+          <form method="post" action="{{ url_for('access_logout') }}">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="text-button" type="submit">Exit gallery</button>
+          </form>
+        {% endif %}
       </div>
-    {% endif %}
+    </div>
   </header>
 
-  <main>
+  <main id="main-content">
     {% with messages = get_flashed_messages(with_categories=true) %}
-      {% for category, message in messages %}
-        <div class="flash {{ category }}">{{ message }}</div>
-      {% endfor %}
+      {% if messages %}
+      <div class="flash-stack page-shell" aria-live="polite">
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
 
-  <footer>
-    {% if not is_admin %}<a href="{{ url_for('login', next=request.path) }}">Admin login</a>{% endif %}
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img src="{{ url_for('static', filename='jrfs-crest.png') }}" alt="">
+        <div>
+          <strong>Jump Rope Federation Singapore</strong>
+          <span>{{ event_short_name }} media centre</span>
+        </div>
+      </div>
+      <div class="footer-links">
+        <a href="https://www.jrfs.org.sg/jrfs-data-protection-policy" target="_blank" rel="noreferrer">Data protection</a>
+        <a href="mailto:{{ contact_email }}">Event enquiries</a>
+        <a href="mailto:{{ privacy_email }}">Privacy or media removal</a>
+        {% if not is_admin %}<a href="{{ url_for('login', next=request.path) }}">Admin login</a>{% endif %}
+      </div>
+    </div>
   </footer>
 
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
 </body>
 </html>

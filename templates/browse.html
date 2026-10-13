@@ -2,106 +2,206 @@
 {% block title %}{% if rel %}{{ title }} · {% endif %}{{ site_name }}{% endblock %}
 {% block content %}
 
-{% if rel %}
-<nav class="crumbs">
-  <a href="{{ url_for('browse') }}">All events</a>
-  {% for name, path in crumbs %}
-    <span class="sep">/</span>
-    {% if loop.last %}<span>{{ name }}</span>{% else %}<a href="{{ url_for('browse', rel=path) }}">{{ name }}</a>{% endif %}
-  {% endfor %}
-</nav>
-{% endif %}
+{% if not rel %}
+<section class="event-hero">
+  <div class="event-hero-inner page-shell">
+    <div class="hero-copy">
+      <p class="eyebrow eyebrow-light">Event media centre</p>
+      <h1>Find your<br><span>moment.</span></h1>
+      <p class="hero-intro">Browse, select and export competition photos and videos—built for athletes, coaches and team managers.</p>
+      <dl class="event-facts">
+        <div><dt>Date</dt><dd>{{ event_date }}</dd></div>
+        <div><dt>Venue</dt><dd>{{ event_venue }}</dd></div>
+      </dl>
+    </div>
+    <div class="hero-card" aria-label="{{ event_name }}">
+      <div class="hero-card-line"></div>
+      <img src="{{ url_for('static', filename='jrfs-crest.png') }}" alt="Jump Rope Federation Singapore crest">
+      <p>{{ event_short_name }}</p>
+      <strong>Singapore National<br>& Open Championship</strong>
+      <span>Photos · Videos · Team downloads</span>
+    </div>
+  </div>
+  <div class="hero-stripe" aria-hidden="true"></div>
+</section>
 
-<div class="heading">
-  <h1>{{ title }}</h1>
-  {% if rel and total %}
-    <a class="btn" href="{{ url_for('download_zip', rel=rel) }}">Download all ({{ total }})</a>
-  {% endif %}
-</div>
-
-{% if is_admin %}
-<section class="admin-panel card">
-  <form method="post" action="{{ url_for('make_folder', rel=rel) }}" class="row">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <input name="name" required placeholder="{{ 'New event, e.g. SNOJRC 2026' if not rel else 'New subfolder, e.g. SSRS' }}">
-    <button class="btn secondary">Create folder</button>
-  </form>
-
-  {% if rel %}
-  <form id="upload-form" method="post" enctype="multipart/form-data" action="{{ url_for('upload', rel=rel) }}" class="row">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <input type="file" name="photos" multiple accept=".jpg,.jpeg,.png,.gif,.webp" required>
-    <button class="btn">Upload photos</button>
-    <progress max="1" value="0" hidden></progress>
-    <span class="upload-status"></span>
-  </form>
-
-  <form method="post" action="{{ url_for('delete', rel=rel) }}" class="row"
-        onsubmit="return confirm('Delete “{{ title }}” and everything inside it? This cannot be undone.')">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <button class="btn danger">Delete this folder</button>
-  </form>
-  {% endif %}
+<section class="journey page-shell" aria-labelledby="how-heading">
+  <div>
+    <p class="eyebrow">For every team</p>
+    <h2 id="how-heading">From arena to camera roll</h2>
+  </div>
+  <ol class="journey-steps">
+    <li><span>01</span><div><strong>Choose an event</strong><p>Open the competition category or team album.</p></div></li>
+    <li><span>02</span><div><strong>Review your media</strong><p>Preview photos and playable video in one place.</p></div></li>
+    <li><span>03</span><div><strong>Export your picks</strong><p>Download one file, a selection, or the entire folder.</p></div></li>
+  </ol>
 </section>
 {% endif %}
 
-{% if folders %}
-<div class="folder-grid">
-  {% for f in folders %}
-  <a class="folder-card card" href="{{ url_for('browse', rel=f.rel) }}">
-    <div class="cover">
-      {% if f.cover %}
-        <img loading="lazy" src="{{ url_for('thumb', size='thumb', rel=f.cover) }}" alt="">
-      {% else %}
-        <span>No photos yet</span>
+<section class="gallery-section page-shell">
+  {% if rel %}
+  <nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="{{ url_for('browse') }}">All galleries</a>
+    {% for name, path in crumbs %}
+      <span class="crumb-separator" aria-hidden="true">›</span>
+      {% if loop.last %}<span aria-current="page">{{ name }}</span>{% else %}<a href="{{ url_for('browse', rel=path) }}">{{ name }}</a>{% endif %}
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  <div class="section-heading">
+    <div>
+      <p class="eyebrow">{{ 'Inside this gallery' if rel else 'Browse the archive' }}</p>
+      <h1 class="gallery-title">{{ title }}</h1>
+      <p class="section-summary">
+        {% if total %}{{ total }} media file{{ '' if total == 1 else 's' }} available{% else %}Media will appear here when uploaded{% endif %}
+      </p>
+    </div>
+    {% if rel and total %}
+      <a class="button button-primary" href="{{ url_for('download_zip', rel=rel) }}">
+        <span aria-hidden="true">↓</span> Download all <span class="button-count">{{ total }}</span>
+      </a>
+    {% endif %}
+  </div>
+
+  {% if is_admin %}
+  <details class="admin-panel" open>
+    <summary><span>Gallery management</span><small>Admin only</small></summary>
+    <div class="admin-panel-body">
+      <form method="post" action="{{ url_for('make_folder', rel=rel) }}" class="admin-row">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>
+          <span>New folder</span>
+          <input name="name" required maxlength="100" placeholder="{{ 'e.g. SNOJRC 2026' if not rel else 'e.g. SRSS — U18' }}">
+        </label>
+        <button class="button button-secondary" type="submit">Create folder</button>
+      </form>
+
+      {% if rel %}
+      <form id="upload-form" method="post" enctype="multipart/form-data" action="{{ url_for('upload', rel=rel) }}" class="admin-row">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>
+          <span>Photos or videos</span>
+          <input type="file" name="media" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.m4v,.mov,.webm" required>
+        </label>
+        <button class="button button-primary" type="submit">Upload media</button>
+        <progress max="1" value="0" hidden aria-label="Upload progress"></progress>
+        <span class="upload-status" aria-live="polite"></span>
+      </form>
+
+      <form method="post" action="{{ url_for('delete', rel=rel) }}" class="admin-row admin-danger confirm-delete"
+            data-confirm="Delete “{{ title }}” and everything inside it? This cannot be undone.">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div><strong>Delete this folder</strong><small>Removes all nested media and folders.</small></div>
+        <button class="button button-danger" type="submit">Delete folder</button>
+      </form>
       {% endif %}
     </div>
-    <div class="meta">
-      <strong>{{ f.name }}</strong>
-      <small>{{ f.count }} photo{{ '' if f.count == 1 else 's' }}</small>
-    </div>
-  </a>
-  {% endfor %}
-</div>
-{% endif %}
+  </details>
+  {% endif %}
 
-{% if images %}
-<form id="select-form" method="post" action="{{ url_for('download_zip', rel=rel) }}">
-  <div class="toolbar">
-    <label><input type="checkbox" id="select-all"> Select all</label>
-    <button class="btn" id="dl-selected" disabled>Download selected (<span id="sel-count">0</span>)</button>
+  {% if folders %}
+  <div class="subsection-heading">
+    <h2>{{ 'Albums' if rel else 'Event galleries' }}</h2>
+    <span>{{ folders|length }} folder{{ '' if folders|length == 1 else 's' }}</span>
   </div>
-  <div class="photo-grid">
-    {% for img in images %}
-    <figure class="photo"
-            data-name="{{ img.name }}"
-            data-preview="{{ url_for('thumb', size='preview', rel=img.rel) }}"
-            data-download="{{ url_for('original', rel=img.rel, dl=1) }}"
-            data-delete="{{ url_for('delete', rel=img.rel) }}">
-      <img loading="lazy" src="{{ url_for('thumb', size='thumb', rel=img.rel) }}" alt="{{ img.name }}">
-      <label class="pick" title="Select"><input type="checkbox" name="files" value="{{ img.name }}"></label>
-    </figure>
+  <div class="folder-grid">
+    {% for folder in folders %}
+    <a class="folder-card" href="{{ url_for('browse', rel=folder.rel) }}">
+      <div class="folder-cover">
+        {% if folder.cover and folder.cover_kind == 'image' %}
+          <img loading="lazy" src="{{ url_for('thumb', size='thumb', rel=folder.cover) }}" alt="">
+        {% elif folder.cover_kind == 'video' %}
+          <div class="video-placeholder compact"><span class="play-icon" aria-hidden="true">▶</span><small>Video album</small></div>
+        {% else %}
+          <div class="empty-cover"><span aria-hidden="true">＋</span><small>Ready for media</small></div>
+        {% endif %}
+        <span class="folder-arrow" aria-hidden="true">↗</span>
+      </div>
+      <div class="folder-meta">
+        <div><strong>{{ folder.name }}</strong><small>{{ folder.count }} file{{ '' if folder.count == 1 else 's' }}</small></div>
+        <span class="folder-tag">Gallery</span>
+      </div>
+    </a>
     {% endfor %}
   </div>
-</form>
-{% elif not folders %}
-  <p class="empty">{{ 'No events yet.' if not rel else 'No photos here yet.' }}</p>
-{% endif %}
+  {% endif %}
 
-<div id="lightbox" hidden>
-  <button class="lb-btn lb-close" aria-label="Close">&times;</button>
-  <button class="lb-btn lb-prev" aria-label="Previous">&#8249;</button>
-  <img alt="">
-  <button class="lb-btn lb-next" aria-label="Next">&#8250;</button>
-  <div class="lb-bar">
-    <span class="lb-name"></span>
-    <a class="btn lb-download" href="#">Download</a>
-    {% if is_admin %}
-    <form method="post" class="lb-delete" onsubmit="return confirm('Delete this photo?')">
-      <input type="hidden" name="csrf" value="{{ csrf }}">
-      <button class="btn danger">Delete</button>
-    </form>
-    {% endif %}
+  {% if media %}
+  <form id="select-form" method="post" action="{{ url_for('download_zip', rel=rel) }}">
+    <div class="media-toolbar">
+      <label class="select-all"><input type="checkbox" id="select-all"> <span>Select all</span></label>
+      <div class="toolbar-copy"><span id="sel-count">0</span> selected</div>
+      <button class="button button-primary" id="dl-selected" type="submit" disabled>
+        Download selected
+      </button>
+    </div>
+
+    <div class="photo-grid">
+      {% for item in media %}
+      <article class="media-card"
+               data-name="{{ item.name }}"
+               data-kind="{{ item.kind }}"
+               data-preview="{{ url_for('thumb', size='preview', rel=item.rel) if item.kind == 'image' else url_for('original', rel=item.rel) }}"
+               data-download="{{ url_for('original', rel=item.rel, dl=1) }}"
+               data-delete="{{ url_for('delete', rel=item.rel) }}">
+        <div class="media-frame">
+          <button class="media-open" type="button" aria-label="Open {{ item.name }}">
+            {% if item.kind == 'image' %}
+              <img loading="lazy" src="{{ url_for('thumb', size='thumb', rel=item.rel) }}" alt="">
+            {% else %}
+              <span class="video-placeholder">
+                <span class="play-icon" aria-hidden="true">▶</span>
+                <strong>Play video</strong>
+                <small>{{ item.name }}</small>
+              </span>
+            {% endif %}
+          </button>
+          <label class="media-picker">
+            <input type="checkbox" name="files" value="{{ item.name }}">
+            <span><span aria-hidden="true">✓</span><span class="sr-only">Select {{ item.name }}</span></span>
+          </label>
+          <span class="media-kind">{{ item.type_label }}</span>
+        </div>
+        <div class="media-meta">
+          <span title="{{ item.name }}">{{ item.name }}</span>
+          <a href="{{ url_for('original', rel=item.rel, dl=1) }}" aria-label="Download {{ item.name }}">↓</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  </form>
+  {% elif not folders %}
+    <div class="empty-state">
+      <span class="empty-state-mark" aria-hidden="true">JR</span>
+      <h2>{{ 'No event galleries yet' if not rel else 'This gallery is ready' }}</h2>
+      <p>{{ 'An administrator can create the first event folder.' if not rel else 'Photos and videos will appear here after they are uploaded.' }}</p>
+    </div>
+  {% endif %}
+</section>
+
+<div id="lightbox" class="lightbox" hidden role="dialog" aria-modal="true" aria-labelledby="lightbox-name">
+  <div class="lightbox-backdrop" data-close-lightbox></div>
+  <div class="lightbox-panel">
+    <button class="lightbox-button lightbox-close" type="button" aria-label="Close viewer">×</button>
+    <button class="lightbox-button lightbox-prev" type="button" aria-label="Previous media">‹</button>
+    <div class="lightbox-stage">
+      <img alt="" hidden>
+      <video controls playsinline preload="metadata" hidden></video>
+    </div>
+    <button class="lightbox-button lightbox-next" type="button" aria-label="Next media">›</button>
+    <div class="lightbox-bar">
+      <div><strong id="lightbox-name" class="lightbox-name"></strong><span class="lightbox-position"></span></div>
+      <div class="lightbox-actions">
+        <a class="button button-primary lightbox-download" href="#">Download original</a>
+        {% if is_admin %}
+        <form method="post" class="lightbox-delete confirm-delete" data-confirm="Delete this media file? This cannot be undone.">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="button button-danger" type="submit">Delete</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
   </div>
 </div>
 

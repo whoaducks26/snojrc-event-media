@@ -1,6 +1,14 @@
 media/
 cache/
-.venv/
+.venv*/
+/Include/
+/Lib/
+/Scripts/
+/pyvenv.cfg
 __pycache__/
 *.pyc
 .env
+.env.*
+!.env.example
+desktop.ini
+*.zip

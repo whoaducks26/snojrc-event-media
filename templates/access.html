@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Gallery access · {{ site_name }}{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+{% block content %}
+<section class="auth-shell page-shell">
+  <div class="auth-intro">
+    <p class="eyebrow eyebrow-light">SNOJRC event media</p>
+    <h1>Your moments,<br><span>kept with care.</span></h1>
+    <p>This gallery is for authorised athletes, coaches and team managers.</p>
+  </div>
+  <form method="post" class="auth-card">
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <img src="{{ url_for('static', filename='jrfs-crest.png') }}" alt="">
+    <p class="eyebrow">Protected gallery</p>
+    <h2>Enter access code</h2>
+    <label for="password">Code provided by JRFS</label>
+    <input id="password" type="password" name="password" autocomplete="current-password" required autofocus>
+    <button class="button button-primary button-wide" type="submit">View event media</button>
+    <p class="auth-note">Please do not share the code or redistribute media without permission.</p>
+  </form>
+</section>
+{% endblock %}

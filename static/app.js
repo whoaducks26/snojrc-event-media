@@ -1,142 +1,172 @@
 (() => {
-  // ---- Select photos + download selected as zip
+  "use strict";
+
+  document.querySelectorAll(".confirm-delete").forEach((form) => {
+    form.addEventListener("submit", (event) => {
+      if (!window.confirm(form.dataset.confirm || "Delete this item?")) {
+        event.preventDefault();
+      }
+    });
+  });
+
   const selectForm = document.getElementById("select-form");
   if (selectForm) {
     const boxes = [...selectForm.querySelectorAll('input[name="files"]')];
     const all = document.getElementById("select-all");
     const button = document.getElementById("dl-selected");
     const count = document.getElementById("sel-count");
-    const update = () => {
-      const n = boxes.filter((b) => b.checked).length;
-      count.textContent = n;
-      button.disabled = n === 0;
-      all.checked = n === boxes.length;
-      all.indeterminate = n > 0 && n < boxes.length;
-      boxes.forEach((b) => b.closest(".photo").classList.toggle("selected", b.checked));
-    };
-    boxes.forEach((b) => b.addEventListener("change", update));
-    all.addEventListener("change", () => {
-      boxes.forEach((b) => (b.checked = all.checked));
-      update();
-    });
-    update(); // browsers can restore checkbox state when going back
-  }
 
-  // ---- Lightbox viewer
-  const lb = document.getElementById("lightbox");
-  const photos = [...document.querySelectorAll(".photo")];
-  if (lb && photos.length) {
-    const img = lb.querySelector("img");
-    const name = lb.querySelector(".lb-name");
-    const download = lb.querySelector(".lb-download");
-    const del = lb.querySelector(".lb-delete");
-    let current = 0;
-
-    const show = (i) => {
-      current = (i + photos.length) % photos.length;
-      const d = photos[current].dataset;
-      img.src = d.preview;
-      name.textContent = `${d.name} (${current + 1} of ${photos.length})`;
-      download.href = d.download;
-      if (del) del.action = d.delete;
-      lb.hidden = false;
-      document.body.classList.add("no-scroll");
-    };
-    const close = () => {
-      lb.hidden = true;
-      img.removeAttribute("src");
-      document.body.classList.remove("no-scroll");
-    };
-
-    photos.forEach((p, i) => p.querySelector("img").addEventListener("click", () => show(i)));
-    lb.querySelector(".lb-prev").addEventListener("click", () => show(current - 1));
-    lb.querySelector(".lb-next").addEventListener("click", () => show(current + 1));
-    lb.querySelector(".lb-close").addEventListener("click", close);
-    lb.addEventListener("click", (e) => { if (e.target === lb) close(); });
-    document.addEventListener("keydown", (e) => {
-      if (lb.hidden) return;
-      if (e.key === "Escape") close();
-      else if (e.key === "ArrowLeft") show(current - 1);
-      else if (e.key === "ArrowRight") show(current + 1);
-    });
-
-    let touchX = null; // swipe left/right on phones
-    lb.addEventListener("touchstart", (e) => (touchX = e.touches[0].clientX), { passive: true });
-    lb.addEventListener("touchend", (e) => {
-      if (touchX === null) return;
-      const dx = e.changedTouches[0].clientX - touchX;
-      if (Math.abs(dx) > 50) show(current + (dx < 0 ? 1 : -1));
-      touchX = null;
-    });
-  }
-
-  // ---- Upload in small batches with a progress bar (avoids huge single requests)
-  const uploadForm = document.getElementById("upload-form");
-  if (uploadForm) {
-    const BATCH = 5;
-    const input = uploadForm.querySelector('input[type="file"]');
-    const button = uploadForm.querySelector("button");
-    const bar = uploadForm.querySelector("progress");
-    const status = uploadForm.querySelector(".upload-status");
-    const csrf = uploadForm.querySelector('input[name="csrf"]').value;
-
-    const sendBatch = (files, onProgress) =>
-      new Promise((resolve, reject) => {
-        const data = new FormData();
-        data.append("csrf", csrf);
-        files.forEach((f) => data.append("photos", f));
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", uploadForm.action);
-        xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
-        xhr.upload.onprogress = (e) => onProgress(e.loaded);
-        xhr.onload = () => {
-          let body = {};
-          try { body = JSON.parse(xhr.responseText); } catch {}
-          if (xhr.status === 200) resolve(body);
-          else reject(new Error(body.error || `Upload failed (error ${xhr.status}).`));
-        };
-        xhr.onerror = () => reject(new Error("Network error — check your connection."));
-        xhr.send(data);
+    const updateSelection = () => {
+      const selected = boxes.filter((box) => box.checked).length;
+      count.textContent = selected;
+      button.disabled = selected === 0;
+      all.checked = selected === boxes.length;
+      all.indeterminate = selected > 0 && selected < boxes.length;
+      boxes.forEach((box) => {
+        box.closest(".media-card").classList.toggle("selected", box.checked);
       });
+    };
 
-    uploadForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const files = [...input.files];
-      if (!files.length) return;
-      const totalBytes = files.reduce((s, f) => s + f.size, 0) || 1;
-      let doneBytes = 0, saved = 0;
-      const skipped = [];
+    boxes.forEach((box) => box.addEventListener("change", updateSelection));
+    all.addEventListener("change", () => {
+      boxes.forEach((box) => {
+        box.checked = all.checked;
+      });
+      updateSelection();
+    });
+    updateSelection();
+  }
 
-      button.disabled = input.disabled = true;
-      bar.hidden = false;
-      try {
-        for (let i = 0; i < files.length; i += BATCH) {
-          const batch = files.slice(i, i + BATCH);
-          status.textContent = `Uploading ${Math.min(i + BATCH, files.length)} of ${files.length}…`;
-          const res = await sendBatch(batch, (loaded) => {
-            bar.value = Math.min(1, (doneBytes + loaded) / totalBytes);
-          });
-          doneBytes += batch.reduce((s, f) => s + f.size, 0);
-          saved += res.saved || 0;
-          skipped.push(...(res.skipped || []));
-        }
-      } catch (err) {
-        status.textContent = `${err.message} ${saved} uploaded before the error.`;
-        button.disabled = input.disabled = false;
-        return;
+  const lightbox = document.getElementById("lightbox");
+  const mediaCards = [...document.querySelectorAll(".media-card")];
+  if (lightbox && mediaCards.length) {
+    const image = lightbox.querySelector(".lightbox-stage img");
+    const video = lightbox.querySelector(".lightbox-stage video");
+    const name = lightbox.querySelector(".lightbox-name");
+    const position = lightbox.querySelector(".lightbox-position");
+    const download = lightbox.querySelector(".lightbox-download");
+    const deleteForm = lightbox.querySelector(".lightbox-delete");
+    const closeButton = lightbox.querySelector(".lightbox-close");
+    let current = 0;
+    let previousFocus = null;
+
+    const stopVideo = () => {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    };
+
+    const show = (index) => {
+      current = (index + mediaCards.length) % mediaCards.length;
+      const data = mediaCards[current].dataset;
+      name.textContent = data.name;
+      position.textContent =
+        String(current + 1) +
+        " of " +
+        String(mediaCards.length) +
+        " · " +
+        (data.kind === "video" ? "Video" : "Photo");
+      download.href = data.download;
+      if (deleteForm) deleteForm.action = data.delete;
+
+      if (data.kind === "video") {
+        image.hidden = true;
+        image.removeAttribute("src");
+        video.src = data.preview;
+        video.hidden = false;
+      } else {
+        stopVideo();
+        video.hidden = true;
+        image.src = data.preview;
+        image.alt = data.name;
+        image.hidden = false;
       }
 
-      bar.value = 1;
-      if (skipped.length) {
-        status.innerHTML = "";
-        status.append(`Uploaded ${saved}. Skipped: ${skipped.join(", ")}. `);
-        const link = document.createElement("a");
-        link.href = location.href;
-        link.textContent = "Refresh page";
-        status.append(link);
-      } else {
-        status.textContent = `Uploaded ${saved} photo${saved === 1 ? "" : "s"}.`;
-        location.reload();
+      lightbox.hidden = false;
+      document.body.classList.add("no-scroll");
+      closeButton.focus();
+    };
+
+    const close = () => {
+      if (lightbox.hidden) return;
+      stopVideo();
+      image.removeAttribute("src");
+      lightbox.hidden = true;
+      document.body.classList.remove("no-scroll");
+      if (previousFocus) previousFocus.focus();
+    };
+
+    mediaCards.forEach((card, index) => {
+      card.querySelector(".media-open").addEventListener("click", (event) => {
+        previousFocus = event.currentTarget;
+        show(index);
+      });
+    });
+    closeButton.addEventListener("click", close);
+    lightbox.querySelector("[data-close-lightbox]").addEventListener("click", close);
+    lightbox.querySelector(".lightbox-prev").addEventListener("click", () => show(current - 1));
+    lightbox.querySelector(".lightbox-next").addEventListener("click", () => show(current + 1));
+
+    document.addEventListener("keydown", (event) => {
+      if (lightbox.hidden) return;
+      if (event.key === "Escape") close();
+      if (event.key === "ArrowLeft") show(current - 1);
+      if (event.key === "ArrowRight") show(current + 1);
+    });
+  }
+
+  const uploadForm = document.getElementById("upload-form");
+  if (uploadForm) {
+    const input = uploadForm.querySelector('input[type="file"]');
+    const button = uploadForm.querySelector('button[type="submit"]');
+    const progress = uploadForm.querySelector("progress");
+    const status = uploadForm.querySelector(".upload-status");
+
+    uploadForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const files = [...input.files];
+      if (!files.length) return;
+
+      button.disabled = true;
+      input.disabled = true;
+      progress.hidden = false;
+      progress.max = files.length;
+      progress.value = 0;
+      let saved = 0;
+      const skipped = [];
+
+      try {
+        // One file per request keeps large videos below the configured request limit.
+        for (let index = 0; index < files.length; index += 1) {
+          status.textContent =
+            "Uploading " + String(index + 1) + " of " + String(files.length) + "…";
+          const payload = new FormData();
+          payload.append("csrf", uploadForm.querySelector('[name="csrf"]').value);
+          payload.append("media", files[index]);
+
+          const response = await fetch(uploadForm.action, {
+            method: "POST",
+            body: payload,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(result.error || "Upload failed (" + String(response.status) + ")");
+          }
+          saved += result.saved || 0;
+          skipped.push(...(result.skipped || []));
+          progress.value = index + 1;
+        }
+
+        status.textContent = skipped.length
+          ? "Uploaded " + String(saved) + ". Skipped: " + skipped.join("; ")
+          : "Uploaded " + String(saved) + " file" + (saved === 1 ? "" : "s") + ". Refreshing…";
+        window.setTimeout(() => window.location.reload(), skipped.length ? 1800 : 450);
+      } catch (error) {
+        status.textContent = error.message;
+        status.classList.add("error-text");
+        button.disabled = false;
+        input.disabled = false;
       }
     });
   }

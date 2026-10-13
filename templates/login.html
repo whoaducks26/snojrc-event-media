@@ -1,10 +1,22 @@
 {% extends "base.html" %}
 {% block title %}Admin login · {{ site_name }}{% endblock %}
+{% block body_class %}auth-page{% endblock %}
 {% block content %}
-<form method="post" class="login card">
-  <h1>Admin login</h1>
-  <label for="password">Password</label>
-  <input id="password" type="password" name="password" required autofocus>
-  <button class="btn">Log in</button>
-</form>
+<section class="auth-shell page-shell">
+  <div class="auth-intro">
+    <p class="eyebrow eyebrow-light">Restricted area</p>
+    <h1>Manage the<br>media centre.</h1>
+    <p>Create galleries, upload event media and curate the archive.</p>
+  </div>
+  <form method="post" class="auth-card">
+    <input type="hidden" name="next" value="{{ next_url }}">
+    <img src="{{ url_for('static', filename='jrfs-crest.png') }}" alt="">
+    <p class="eyebrow">Administrator</p>
+    <h2>Sign in</h2>
+    <label for="password">Admin password</label>
+    <input id="password" type="password" name="password" autocomplete="current-password" required autofocus>
+    <button class="button button-primary button-wide" type="submit">Open admin tools</button>
+    <a class="auth-back" href="{{ url_for('browse') }}">Back to gallery</a>
+  </form>
+</section>
 {% endblock %}
